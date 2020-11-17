@@ -1,0 +1,12 @@
+{
+  "servers": {
+      "0": [
+      {
+        "server_id": 0,
+        "trigger": "default",
+        "reply": "you really should not see this",
+        "requestor": "nobody#1234"
+      }
+    ]
+  }
+}
