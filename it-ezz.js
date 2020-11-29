@@ -35,7 +35,7 @@ client.once('ready', () => {
     client.user.setPresence({
         status: "online",
         activity: {
-            name: 'Yo hablo español',
+            name: 'You know what they say',
             type: 'PLAYING'
         }
     });
@@ -60,25 +60,25 @@ client.on('message', async message => {
     let user = message.mentions.users.first();
     userId = user ? user.id : undefined;
     if (userId === client.user.id) {
-        if (/say/gi.test(msg)) {
+        if (msg.toLowerCase().startsWith(bot + ' say')) {
             return TTSTime(message, 'say', 'en');
         }
-        if (/parler/gi.test(msg)) {
+        if (msg.toLowerCase().startsWith(bot + ' parler')) {
             return TTSTime(message, 'parler', 'fr');
         }
-        if (/hablar/gi.test(msg)) {
+        if (msg.toLowerCase().startsWith(bot + ' hablar')) {
             return TTSTime(message, 'hablar', 'es');
         }
-        if (/skazat/gi.test(msg)) {
+        if (msg.toLowerCase().startsWith(bot + ' skazat')) {
             return TTSTime(message, 'skazat', 'ru');
         }
-        if (msg.startsWith(bot + ' dc')) {
+        if (msg.toLowerCase().startsWith(bot + ' dc')) {
             return disconnect(message);
         }
-        if (/help/gi.test(msg)) {
+        if (msg.toLowerCase().startsWith(bot + ' help')) {
             return message.channel.send(helpMessage);
         }
-        if (/removelist/gi.test(msg)) {
+        if (msg.toLowerCase().startsWith(bot + ' removelist')) {
             let index = (msg.split(' '))[2]
             if (!index) {
                 index = 0;
@@ -88,7 +88,7 @@ client.on('message', async message => {
             }
             return printFile(rmFile, 'Remove list', message, index);
         }
-        if (/addlist/gi.test(msg)) {
+        if (msg.toLowerCase().startsWith(bot + ' addlist')) {
             let index = (msg.split(' '))[2]
             if (!index) {
                 index = 0;
@@ -98,11 +98,11 @@ client.on('message', async message => {
             }
             return printFile(file, 'User contributed', message, index);
         }
-        if (/add/gi.test(msg)) {
+        if (msg.toLowerCase().startsWith(bot + ' add')) {
             addMessage(msg, message);
             return;
         }
-        if (/remove/gi.test(msg)) {
+        if (msg.toLowerCase().startsWith(bot + ' remove')) {
             removeMessage(msg, message);
             return;
         }
@@ -127,33 +127,33 @@ client.on('message', async message => {
         return;
     }
     if (/hol up/gi.test(msg) && message.mentions.users.size > 0) {
-        message.channel.send("<@!" + userId + ">", { files: ["https://cdn.discordapp.com/attachments/687126062173388829/750787089662214225/tenor.gif"] });
+        message.channel.send("<@!" + userId + ">\nhttps://cdn.discordapp.com/attachments/687126062173388829/750787089662214225/tenor.gif");
         return;
     }
     if (/needs a hug/gi.test(msg) && message.mentions.users.size > 0) {
-        message.channel.send("<@!" + userId + ">", { files: ["https://cdn.discordapp.com/attachments/687122238541135934/756597682641961041/tenor.gif"] });
+        message.channel.send("<@!" + userId + ">\nhttps://cdn.discordapp.com/attachments/687122238541135934/756597682641961041/tenor.gif");
         return;
     }
-    itEzz('hold up', { files: ["https://res.cloudinary.com/teepublic/image/private/s--hW40K4hS--/t_Preview/b_rgb:191919,c_lpad,f_jpg,h_630,q_90,w_1200/v1494300021/production/designs/1586070_1.jpg"] }, msg, message);
-    itEzz('i need a hug', { files: ["https://cdn.discordapp.com/attachments/687122238541135934/756597682641961041/tenor.gif"] }, msg, message);
-    if (!(/hold up/gi.test(msg))) itEzz('hol up', { files: ["https://cdn.discordapp.com/attachments/687126062173388829/750787089662214225/tenor.gif"] }, msg, message);
-    itEzz('you know what they say', "It ezz what it ezz.", msg, message);
-    itEzz('fucking bullshit', "straight facts B.", msg, message);
-    itEzz('ducking', "Excuse me, you meant fucking.", msg, message);
-    if (!(/ducking/gi.test(msg))) itEzz('duck', "Excuse me, you meant fuck.", msg, message);
+    itEzzReply('hold up', "https://res.cloudinary.com/teepublic/image/private/s--hW40K4hS--/t_Preview/b_rgb:191919,c_lpad,f_jpg,h_630,q_90,w_1200/v1494300021/production/designs/1586070_1.jpg", msg, message);
+    itEzzReply('i need a hug', "https://cdn.discordapp.com/attachments/687122238541135934/756597682641961041/tenor.gif", msg, message);
+    if (!(/hold up/gi.test(msg))) itEzzReply('hol up', "https://cdn.discordapp.com/attachments/687126062173388829/750787089662214225/tenor.gif", msg, message);
+    itEzzReply('you know what they say', "It ezz what it ezz.", msg, message);
+    itEzzReply('fucking bullshit', "straight facts B.", msg, message);
+    itEzzReply('ducking', "Excuse me, you meant fucking.", msg, message);
+    if (!(/ducking/gi.test(msg))) itEzzReply('duck', "Excuse me, you meant fuck.", msg, message);
     if (isEqualIgnoreCase(msg, "sus")) {
-        itEzz('sus', { files: ["https://cdn.discordapp.com/attachments/687125195106156547/750482664821358653/image0.jpg"] }, msg, message);
+        itEzzReply('sus', "https://cdn.discordapp.com/attachments/687125195106156547/750482664821358653/image0.jpg", msg, message);
         return;
     }
-    itEzz('get the bleach', { files: ["https://cdn.discordapp.com/attachments/709939039033098272/765958054612172800/image0.png"] }, msg, message);
-    itEzz('why just why', { files: ["https://cdn.discordapp.com/attachments/709939039033098272/765958408222146600/image0.jpg"] }, msg, message);
+    itEzzReply('get the bleach', "https://cdn.discordapp.com/attachments/709939039033098272/765958054612172800/image0.png", msg, message);
+    itEzzReply('why just why', "https://cdn.discordapp.com/attachments/709939039033098272/765958408222146600/image0.jpg", msg, message);
     let strs = msg.split(" ");
     for (i = 0; i < strs.length; i++) {
         if (isEqualIgnoreCase(strs[i], "sus")) {
-            itEzz('sus', { files: ["https://cdn.discordapp.com/attachments/687125195106156547/750482664821358653/image0.jpg"] }, msg, message);
+            itEzzReply('sus', "https://cdn.discordapp.com/attachments/687125195106156547/750482664821358653/image0.jpg", msg, message);
             return;
         } else if (isEqualIgnoreCase(strs[i], "damn")) {
-            itEzz('damn', { files: ["https://cdn.discordapp.com/attachments/738539415843897435/754052901965660330/IMG-20200910-WA0000.jpg"] }, msg, message);
+            itEzzReply('damn', "https://cdn.discordapp.com/attachments/738539415843897435/754052901965660330/IMG-20200910-WA0000.jpg", msg, message);
             return;
         }
     }
@@ -179,7 +179,7 @@ client.on('message', async message => {
     });
 });
 
-function itEzz(pattern, reply, msg, message) {
+function itEzzReply(pattern, reply, msg, message) {
     regex = new RegExp(pattern, 'gi');
     if (regex.test(msg)) {
         message.reply(reply);
@@ -223,12 +223,12 @@ function addMessage(msg, message) {
                     if (!isEqualIgnoreCase(server, message.guild.id)) {
                         continue;
                     } else {
-                        var json = `[{
+                        var json = `{
                         "server_id": ${message.guild.id},
                         "trigger": "${args[1].trim()}",
                         "reply": "${args[2].trim()}",
                         "requestor": "${message.author.tag}"
-                    }]`;
+                    }`;
                         obj.servers[server].push(JSON.parse(json));
                         serverFound = 1;
                     }
@@ -254,14 +254,14 @@ function addMessage(msg, message) {
             message.channel.send("phrase means at least two words...")
         }
     } else {
-        message.channel.send({ files: ['https://cdn.discordapp.com/attachments/709939039033098272/771480694483976192/chris.gif'] });
+        message.channel.send('https://cdn.discordapp.com/attachments/709939039033098272/771480694483976192/chris.gif');
     }
 }
 
 function removeMessage(msg, message) {
     phrase = msg.split(',');
-    var found = 0;
-    if (phrase.length = 2) {
+    var found = false;
+    if (phrase.length === 2) {
         fs.readFile(file, 'ascii', function (err, data) {
             if (err) {
                 message.channel.send('Help me\n' + err)
@@ -272,7 +272,9 @@ function removeMessage(msg, message) {
                 if (!isEqualIgnoreCase(server, message.guild.id)) {
                     continue;
                 }
+                let i = -1;
                 for (m in obj.servers[server]) {
+                    i++;
                     if (isEqualIgnoreCase(obj.servers[server][m].trigger, phrase[1])) {
                         rmEntry = {
                             server_id: message.guild.id,
@@ -298,31 +300,28 @@ function removeMessage(msg, message) {
                                 }]`;
                                 rmObj.servers[id] = JSON.parse(json);
                             }
-                            console.log(JSON.stringify(obj));
-                            delete obj.servers[server][m];
-                            console.log('\n')
-                            console.log(JSON.stringify(obj));
+                            obj.servers[server].splice(i, 1);
+                            //Write after removal to prevent a bug caused by a race condition.
+                            fs.writeFile(file, JSON.stringify(obj), 'ascii', function (err) {
+                                if (err) return console.log(err);
+                            });
                             fs.writeFile(rmFile, JSON.stringify(rmObj), 'ascii', function (err) {
                                 if (err) return message.channel.send('Help me\n' + err);
                             })
                         });
-                        found = 1;
+                        found = true;
                         break;
                     }
                 }
             }
             if (found) {
-                console.log(JSON.stringify(obj));
-                fs.writeFile(file, JSON.stringify(obj), 'ascii', function (err) {
-                    if (err) return console.log(err);
-                });
                 message.channel.send('Found it and removed!');
             } else {
                 message.channel.send('You did something wrong because ' + phrase[1] + ' was not found...');
             }
         });
     } else {
-        message.channel.send({ files: ['https://cdn.discordapp.com/attachments/738539415843897435/771594423213621248/wtf.gif'] });
+        message.channel.send('https://cdn.discordapp.com/attachments/738539415843897435/771594423213621248/wtf.gif');
     }
 }
 
@@ -334,17 +333,19 @@ function printFile(f, type, message, index) {
         }
 
         obj = JSON.parse(data);
-
         const embedMessage = new Discord.MessageEmbed().setColor('#ff00ff').setTitle(type);
-        for (server in obj.servers) {
-            if (!isEqualIgnoreCase(server, message.guild.id)) {
+        for (server_id in obj.servers) {
+            if (!isEqualIgnoreCase(server_id, message.guild.id)) {
                 continue;
             }
-            for (m in obj.servers[server]) {
-                if (obj.servers[server][m] === undefined) break;
-                if (obj.servers[server][m].trigger && obj.servers[server][m].reply && obj.servers[server][m].requestor) {
-                    name = 'Trigger: ' + obj.servers[server][m].trigger + '\nReply: ' + obj.servers[server][m].reply;
-                    value = 'Requested by: ' + obj.servers[server][m].requestor;
+            server = obj.servers[server_id]
+            for (var j = 10 * index; j < 10 * (index + 1); j++) {
+                if (server[j] === undefined) {
+                    continue;
+                }
+                if (server[j].trigger && server[j].reply && server[j].requestor) {
+                    name = 'Trigger: ' + server[j].trigger + '\nReply: ' + server[j].reply;
+                    value = 'Requested by: ' + server[j].requestor;
                     embedMessage.addFields({
                         name: name,
                         value: value
@@ -355,17 +356,20 @@ function printFile(f, type, message, index) {
         message.channel.send(embedMessage);
     });
 }
+
 async function TTSTime(message, speak, language) {
     var temp = message.content.split(speak);
     temp.shift();
     var speech = temp.join(speak);
+    if (speech.length === 0) {
+        return;
+    }
     if (message.member.voice.channel) {
         if (message.member.voice.selfDeaf || message.member.voice.serverDeaf) {
             message.channel.send('You won\'t hear me though :sob:');
             return;
         }
         const serverQueue = queue.get(message.guild.id);
-        //var speech = message.content.slice((bot + speak).length + 1);
         var gtts = new gTTS(speech, language);
         var date = Date.now();
         var filename = 'voice' + message.author.tag + date + '.mp3'
