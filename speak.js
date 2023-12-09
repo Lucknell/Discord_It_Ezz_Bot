@@ -22,7 +22,7 @@ function TTSTime(message, speak, language) {
     var filename = 'config/' + message.guild.id + '/voice' + message.author.id + date + '.mp3'
 
     gtts.save(filename, function (err, result) {
-        if (err) { 
+        if (err) {
             message.channel.send("LOL look at this\n" + err);
             return disconnect(message);
         }

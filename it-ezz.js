@@ -1,16 +1,27 @@
-const Discord = require('discord.js');
-
 const token = require('./token.js');
 
 const util = require('./util.js');
 
-const grades = require('./grades.js')
+const fs = require('fs');
 
-const m = require('./message.js')
+const path = require('path');
 
-const speak = require('./speak.js')
+const speak = require('./speak.js');
 
-const client = new Discord.Client();
+const { Client, Collection, GatewayIntentBits } = require('discord.js');
+
+const client = new Client({
+    intents: [GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.MessageContent,
+]
+});
+
+const { EmbedBuilder } = require('discord.js');
+
+const { REST } = require('@discordjs/rest');
+
+const { Routes } = require('discord.js');
 
 var bot = '';
 
@@ -18,13 +29,69 @@ const bad_boy = ['harder daddy', 'Say it for the people in the back', 'only for 
 
 const bad_bot = ['Oh yea? well fuck you too', 'fucking bullshit', 'everyone look, this guy thought I would care.', 'Error:ID10T fuck not found', 'too bad for you to handle'];
 
-const helpMessage = new Discord.MessageEmbed()
+const replies = ["Christmas is ruined because you ran the commands out of order.", "Hold your horses, you can't hear Mariah Carey's singing just yet..."]
+
+const helpMessage = new EmbedBuilder()
     .setColor('#aa99ff')
     .setTitle('by lucknell')
     .setURL('https://lucknell.github.io')
     .setDescription('I am a bot that says things and post pictures. I can also speak now')
     .setTimestamp()
-    .setFooter('send help plz\nI was last restarted');
+    .setFooter({ text: 'send help plz\nI was last restarted' })
+
+const commands = [{ name: 'help', description: 'get some help' }];
+const rest = new REST({ version: '10' }).setToken(token.token);
+
+(async () => {
+    try {
+        console.log('Started refreshing application (/) commands.');
+        client.commands = new Collection();
+        const commandsPath = path.join(__dirname, 'commands');
+        const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
+
+        for (const file of commandFiles) {
+            const filePath = path.join(commandsPath, file);
+            const command = require(filePath);
+            // Set a new item in the Collection
+            // With the key as the command name and the value as the exported module
+            client.commands.set(command.data.name, command);
+            commands.push(command.data.toJSON());
+            console.log(command.data.name)
+        }
+
+        await rest.put(
+            Routes.applicationCommands(util.clientID),
+            { body: commands },
+        );
+
+        console.log('Successfully reloaded application (/) commands.');
+    } catch (error) {
+        console.error(error);
+    }
+    client.login(token.token);
+})();
+
+client.on('interactionCreate', async interaction => {
+    if (interaction.isButton()) {
+        util.process_button_interaction(interaction);
+    }
+    if (!interaction.isChatInputCommand()) return;
+    if (interaction.commandName === 'help')
+        return await interaction.reply({ embeds: [helpMessage] });
+
+    const command = client.commands.get(interaction.commandName);
+    
+    if (!command) return;
+
+    try {
+        await command.execute(interaction);
+    } catch (error) {
+        console.error(error);
+        await interaction.reply({ content: 'There was an error while executing this command!', ephemeral: true });
+    }
+
+
+});
 
 client.once('ready', () => {
     console.log('It ezz what it ezz')
@@ -39,38 +106,39 @@ client.once('ready', () => {
     mbot = '<@' + client.user.id + '>';
     helpMessage.addFields({
         name: 'Help',
-        value: 'at me and say help'
+        value: '/help'
     }, {
         name: 'What triggers me',
-        value: bot + ' add,some phrase,reply\n' +
-            bot + ' add,birthday,@user,mm/dd\n' + bot + ' report card\n' + bot + ' turn in\n' + bot + ' reset grades\n' +
-            bot + ' remove,some phrase\n' + bot + ' word list\n' + bot + ' phrase list\n' + bot + ' remove list\n' + bot + ' say some wild shit\n' +
-            bot + ' birthday\n' + bot + ' birthdays\n' +
-            bot + ' parler omelette du fromage\n' + bot + ' hablar tengo un gato en mis pantalones\n' + bot + ' skazat медведь на одноколесном велосипеде\n' +
-            bot + ' dc'
+        value: 'Check out my slash commands'
     })
     avatar = "https://cdn.discordapp.com/attachments/687125195106156547/749283650033680895/image0.png"
     client.user.setAvatar(avatar).catch((err) => { console.log("avatar is being updated too often") });
-    setTimeout(function () { // in leftToEight() milliseconds run this:
-        util.sendMessage(); // send the message once
-        var dayMillseconds = 1000 * 60 * 60 * 6;
-        setInterval(function () { // repeat this every 24 hours
-            util.sendMessage();
+    //util.resurrection(client);
+    //util.migrate(client);
+    setTimeout(function () {
+		util.sendFutureBirthdayMessage(client);
+        var dayMillseconds = 1000 * 60;
+        setInterval(function () {
+			util.sendFutureBirthdayMessage(client);
         }, dayMillseconds)
-    }, util.leftToEight())
+    }, 10000);
 });
 
 client.on('guildCreate', guild => {
-    guild.systemChannel.send(helpMessage);
+    guild.systemChannel.send({ embeds: [helpMessage] });
     util.createServerFile(guild.id);
-
 });
 
-client.on('message', message => {
+client.on('uncaughtException', function(err) {
+           console.error(err)
+});
+
+client.on('messageCreate', message => {
     if (message.author.bot) return;
     let file = "config/" + message.guild.id + "/grades.json";
     const msg = message.content;
-    
+    //return util.random_message(message);
+
     if (mention_bot(msg, 'say')) {
         return speak.TTSTime(message, 'say', 'en');
     }
@@ -88,43 +156,6 @@ client.on('message', message => {
     }
     if (mention_bot(msg, 'help')) {
         return message.channel.send(helpMessage);
-    }
-    if (mention_bot(msg, 'removelist') || mention_bot(msg, 'remove list')) {
-        return m.printFile("config/" + message.guild.id + ".json", 'Remove list', message, client);
-    }
-    if (mention_bot(msg, 'phraselist') || mention_bot(msg, 'phrase list')) {
-        return m.printFile("config/" + message.guild.id + ".json", 'User contributed phrases', message, client);
-    }
-    if (mention_bot(msg, 'wordlist') || mention_bot(msg, 'word list')) {
-        return m.printFile("config/" + message.guild.id + ".json", 'User contributed words', message, client);
-    }
-    if (mention_bot(msg, 'birthday') || mention_bot(msg, 'birthdays')) {
-        return m.printFile("config/" + message.guild.id + ".json", '🎉 Birthdays 🎉', message, client);
-    }
-
-    if (mention_bot(msg, 'report card')) {
-        return grades.reportCard(file, message);
-    }
-
-    if (mention_bot(msg, 'turn in')) {
-        return grades.turnIn(file, message);
-    }
-
-    if (mention_bot(msg, "reset grades")) {
-        return grades.resetGrades(file, message);
-    }
-
-    if (mention_bot(msg, "max out grades")) {
-        return grades.maxOutGrades(file, message);
-    }
-
-    if (mention_bot(msg, 'add')) {
-        m.addMessage(msg, message);
-        return;
-    }
-    if (mention_bot(msg, 'remove')) {
-        m.removeMessage(msg, message);
-        return;
     }
     if (mention_bot(msg, "good bot")) {
         message.react('😄');
@@ -147,5 +178,3 @@ client.on('message', message => {
 function mention_bot(msg, str) {
     return (msg.toLowerCase().startsWith(bot + " " + str) || msg.toLowerCase().startsWith(mbot + " " + str))
 }
-
-client.login(token.token);

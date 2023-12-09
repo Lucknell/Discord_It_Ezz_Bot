@@ -1,342 +1,259 @@
 const util = require('./util.js');
 const fs = require('fs');
 const Discord = require('discord.js');
+const { EmbedBuilder } = require('discord.js');
 
-const grades = ["F", "E", "D", "C-", "C", "C+", "B-", "B", "B+", "A--", "A---", "A", ":poop:", "A+"];
+const grades = ["Z", "F", "E", "D", "C-", "C", "C+", "B-", "B", "B+", "A--", "A---", "A", ":poop:", "A+"];
 
-function reportCard(f, message) {
-    let dir = "config/" + message.guild.id + "/";
-    let file = dir + "grades.json";
-    if (!fs.existsSync(dir)) {
-        fs.mkdir(dir, (err) => {
-            if (err) {
-                throw err;
-            }
-            console.log("Directory is created.");
-        });
-    }
-    if (!fs.existsSync(file)) {
-        let obj = {};
-        obj.grades = [];
-        var json = {
-            score: 0,
-            Math: 0,
-            English: 0,
-            Reading: 0,
-            History: 0,
-            Science: 0,
-            Music: 0,
-            requestor: message.author.id
-        };
-        obj.grades.push(json);
-        fs.writeFileSync(file, JSON.stringify(obj), 'ascii', function (err) {
-            if (err) return console.log(err);
-        });
-    }
-    let data = fs.readFileSync(f, 'ascii');
-    var obj = JSON.parse(data);
-    if (!obj.grades) {
-        obj.grades = [];
-        var json = {
-            score: 0,
-            Math: 0,
-            English: 0,
-            Reading: 0,
-            History: 0,
-            Science: 0,
-            Music: 0,
-            requestor: message.author.id
-        };
-        obj.grades.push(json);
-        fs.writeFileSync(f, JSON.stringify(obj), 'ascii', function (err) {
-            if (err) return console.log(err);
-        });
+const cassandra = require('cassandra-driver');
 
-    }
-    if (obj.grades.length == 0) {
-        var json = {
-            score: 0,
-            Math: 0,
-            English: 0,
-            Reading: 0,
-            History: 0,
-            Science: 0,
-            Music: 0,
-            requestor: message.author.id
-        };
-        obj.grades.push(json);
-        fs.writeFileSync(f, JSON.stringify(obj), 'ascii', function (err) {
-            if (err) return console.log(err);
-        });
-    }
-    for (i in obj.grades) {
-        item = obj.grades[i];
-        if (util.isEqualIgnoreCase(item.requestor, message.author.id)) {
-            //item.score += 1;
-            break;
+const cassie = new cassandra.Client({
+    contactPoints: ['192.168.1.107'],
+    localDataCenter: 'datacenter1'
+});
+
+async function reportCard(interaction) {
+    the_table = `table_${interaction.guildId}.grades`
+    query = `SELECT * FROM ${the_table} where requestor='${interaction.user.id}'`
+    resultSelectWhere = await cassie.execute(query);
+    if (resultSelectWhere.rows.length === 0) {
+        query = `INSERT INTO ${the_table} ("requestor", "english", "history", "math", "music", "reading", "science", "score") VALUES ('${interaction.user.id}', 0, 0, 0, 0, 0, 0, 0)`;
+        await cassie.execute(query);
+        const embedMessage = new EmbedBuilder().setColor('#ff0000');
+        embedMessage.setTitle("Report card for " + interaction.user.username + " in " + interaction.guild.name);
+        embedMessage.addFields({ name: "Math", value: "Z" });
+        embedMessage.addFields({ name: "Reading", value: "Z" });
+        embedMessage.addFields({ name: "English", value: "Z" });
+        embedMessage.addFields({ name: "History", value: "Z" });
+        embedMessage.addFields({ name: "Science", value: "Z" });
+        embedMessage.addFields({ name: "Music", value: "Z" });
+        embedMessage.addFields({ name: "Score", value: "0" });
+        try {
+            interaction.reply({ embeds: [embedMessage] });
+        } catch (err) {
+            interaction.followup({ embeds: [embedMessage] });
         }
-    }
-    if (!(util.isEqualIgnoreCase(obj.grades[i].requestor, message.author.id))) {
-        var json = {
-            score: 0,
-            Math: 0,
-            English: 0,
-            Reading: 0,
-            History: 0,
-            Science: 0,
-            Music: 0,
-            requestor: message.author.id
-        };
-        obj.grades.push(json);
-        const embedMessage = new Discord.MessageEmbed().setColor('#ff0000');
-        embedMessage.setTitle("Report card for " + message.author.username + " in " + message.guild.name);
-        embedMessage.addFields({ name: "Math", value: "F" });
-        embedMessage.addFields({ name: "Reading", value: "F" });
-        embedMessage.addFields({ name: "English", value: "F" });
-        embedMessage.addFields({ name: "History", value: "F" });
-        embedMessage.addFields({ name: "Science", value: "F" });
-        embedMessage.addFields({ name: "Music", value: "F" });
-        embedMessage.addFields({ name: "Score", value: obj.grades[i].score });
-        message.channel.send(embedMessage);
 
     } else {
-        const embedMessage = new Discord.MessageEmbed().setColor('#ff00ff');
-        embedMessage.setTitle("Report card for " + message.author.username + " in " + message.guild.name);
-        grade = grades[obj.grades[i].Math];
+        const embedMessage = new EmbedBuilder().setColor('#ff00ff');
+        entry = resultSelectWhere.rows[0]
+        embedMessage.setTitle("Report card for " + interaction.user.username + " in " + interaction.guild.name);
+        grade = grades[entry.math];
         embedMessage.addFields({ name: "Math", value: grade });
-        grade = grades[obj.grades[i].Reading];
+        grade = grades[entry.reading];
         embedMessage.addFields({ name: "Reading", value: grade });
-        grade = grades[obj.grades[i].English];
+        grade = grades[entry.english];
         embedMessage.addFields({ name: "English", value: grade });
-        grade = grades[obj.grades[i].History];
+        grade = grades[entry.history];
         embedMessage.addFields({ name: "History", value: grade });
-        grade = grades[obj.grades[i].Science];
+        grade = grades[entry.science];
         embedMessage.addFields({ name: "Science", value: grade });
-        grade = grades[obj.grades[i].Music];
+        grade = grades[entry.music];
         embedMessage.addFields({ name: "Music", value: grade });
-        embedMessage.addFields({ name: "Score", value: obj.grades[i].score });
-        message.channel.send(embedMessage);
+        embedMessage.addFields({ name: "Score", value: entry.score + "" });
+        try {
+            interaction.reply({ embeds: [embedMessage] });
+        } catch (err) {
+            interaction.followup({ embeds: [embedMessage] });
+        }
 
     }
-    fs.writeFileSync(f, JSON.stringify(obj), 'ascii', function (err) {
-        if (err) return console.log(err);
-    });
 }
 
-function turnIn(f, message) {
-    let words = message.content.split(" ");
-    if (words.length > 3) {
-        return turnInGrades(f, message, words[3].toUpperCase());
-    }
-    let filter = m => m.author.id === message.author.id;
-    message.channel.send("What grade do you want to update?").then(() => {
-        message.channel.awaitMessages(filter, {
-            max: 1,
-            time: 30000,
-            errors: ['time']
-        })
-            .then(message => {
-                message = message.first()
-                turnInGrades(f, message, message.content.toUpperCase());
-            })
-            .catch(collected => {
-                message.channel.send('Timeout');
-            });
-    });
-}
-
-function turnInGrades(f, message, grade) {
+async function turnIn(interaction) {
+    const grade = interaction.options.getString('grade').toUpperCase();
     if (grade === 'MATH') {
-        updateGrade(f, "Math", message);
+        updateGrade("Math", interaction);
     } else if (grade === 'READING') {
-        updateGrade(f, "Reading", message);
+        updateGrade("Reading", interaction);
     } else if (grade === 'ENGLISH') {
-        updateGrade(f, "English", message);
+        updateGrade("English", interaction);
     } else if (grade === 'HISTORY') {
-        updateGrade(f, "History", message);
+        updateGrade("History", interaction);
     } else if (grade === 'SCIENCE') {
-        updateGrade(f, "Science", message);
+        updateGrade("Science", interaction);
     } else if (grade === 'MUSIC') {
-        updateGrade(f, "Music", message);
+        updateGrade("Music", interaction);
     } else {
-        message.channel.send(`Terminated: Invalid Response`)
+        interaction.reply(`This is impossible to see`)
     }
 }
 
-function maxOutGrades(f, message) {
-    let filter = m => m.author.id === message.author.id;
-    message.channel.send("What grade do you want to max out?").then(() => {
-        message.channel.awaitMessages(filter, {
-            max: 1,
-            time: 30000,
-            errors: ['time']
-        })
-            .then(message => {
-                message = message.first()
-                maxGrade(f, message, message.content.toUpperCase());
-            })
-            .catch(collected => {
-                message.channel.send('Timeout\n'+collected);
-            });
-    });
-    
+function maxOutGrades(interaction) {
+    return maxGrade(interaction);
 }
 
-function updateGrade(f, subject, message) {
-    let data = fs.readFileSync(f, 'ascii');
-    var obj = JSON.parse(data);
-    for (i in obj.grades) {
-        console.log(obj.grades[i])
-        item = obj.grades[i];
-        if (util.isEqualIgnoreCase(item.requestor, message.author.id)) {
-            switch (subject) {
-                case "Math":
-                    list = checkGrade(item.Math, item.score, message);
-                    item.Math = list[0];
-                    item.score = list[1];
-                    break;
-                case "Reading":
-                    list = checkGrade(item.Reading, item.score, message);
-                    item.Reading = list[0];
-                    item.score = list[1];
-                    break;
-                case "English":
-                    list = checkGrade(item.English, item.score, message);
-                    item.English = list[0];
-                    item.score = list[1];
-                    break;
-                case "History":
-                    list = checkGrade(item.History, item.score, message);
-                    item.History = list[0];
-                    item.score = list[1];
-                    break;
-                case "Science":
-                    list = checkGrade(item.Science, item.score, message);
-                    item.Science = list[0];
-                    item.score = list[1];
-                    break;
-                case "Music":
-                    list = checkGrade(item.Music, item.score, message);
-                    item.Music = list[0];
-                    item.score = list[1];
-                    break;
-                default:
-                    message.channel.send("You really shouldn't be seeing this...");
-                    return;
-            }
-            var str1 = "";
-            try {
-                str1 = JSON.stringify(obj);
-            } catch (err) {
-                return message.channel.send("An error occurred\n" + err);
-            }
-            fs.writeFileSync(f, str1, 'ascii', function (err) {
-                if (err) message.channel.send("An error occurred\n" + err);
-            });;
-            reportCard(f, message);
-        }
+async function updateGrade(subject, interaction) {
+    the_table = `table_${interaction.guildId}.grades`
+    query = `SELECT * FROM ${the_table} where requestor='${interaction.user.id}'`
+    resultSelectWhere = await cassie.execute(query);
+    if (resultSelectWhere.rows.length === 0) {
+        query = `INSERT INTO ${the_table} ("requestor", "english", "history", "math", "music", "reading", "science", "score") VALUES ('${interaction.user.id}', 0, 0, 0, 0, 0, 0, 0)`;
+        return await cassie.execute(query);
     }
-}
-
-
-function maxGrade(f, subject, message) {
-    let data = fs.readFileSync(f, 'ascii');
-    var obj = JSON.parse(data);
-    for (i in obj.grades) {
-        item = obj.grades[i];
-        if (util.isEqualIgnoreCase(item.requestor, message.author.id)) {
-            items = [-1, -1];
-            switch (subject) {
-                case "MATH":
-                    list = checkGrade(item.Math, item.score, message);
-                    while (list[0] !== items[0]&& list[1] !== items[1]) {
-                        items[0] = list[0];
-                        items[1] = list[1];
-                        item.Math = list[0];
-                        item.score = list[1];
-                        list = checkGrade(item.Math, item.score, message);
-                    }
-                    break;
-                case "READING":
-                    list = checkGrade(item.Reading, item.score, message);
-                    item.Reading = list[0];
-                    item.score = list[1];
-                    break;
-                case "ENGLISH":
-                    list = checkGrade(item.English, item.score, message);
-                    item.English = list[0];
-                    item.score = list[1];
-                    break;
-                case "HISTORY":
-                    list = checkGrade(item.History, item.score, message);
-                    item.History = list[0];
-                    item.score = list[1];
-                    break;
-                case "SCIENCE":
-                    list = checkGrade(item.Science, item.score, message);
-                    item.Science = list[0];
-                    item.score = list[1];
-                    break;
-                case "MUSIC":
-                    list = checkGrade(item.Music, item.score, message);
-                    item.Music = list[0];
-                    item.score = list[1];
-                    break;
-                default:
-                    message.channel.send("You really shouldn't be seeing this...");
-                    return;
-            }
-            var str1 = "";
-            try {
-                str1 = JSON.stringify(obj);
-            } catch (err) {
-                return message.channel.send("An error occurred\n" + err);
-            }
-            fs.writeFileSync(f, str1, 'ascii', function (err) {
-                if (err) message.channel.send("An error occurred\n" + err);
-            });;
-            reportCard(f, message);
-        }
+    item = resultSelectWhere.rows[0];
+    switch (subject) {
+        case "Math":
+            list = checkGrade(item.math, item.score, interaction, true);
+            item.math = list[0];
+            item.score = list[1];
+            break;
+        case "Reading":
+            list = checkGrade(item.reading, item.score, interaction, true);
+            item.reading = list[0];
+            item.score = list[1];
+            break;
+        case "English":
+            list = checkGrade(item.english, item.score, interaction, true);
+            item.english = list[0];
+            item.score = list[1];
+            break;
+        case "History":
+            list = checkGrade(item.history, item.score, interaction, true);
+            item.history = list[0];
+            item.score = list[1];
+            break;
+        case "Science":
+            list = checkGrade(item.science, item.score, interaction, true);
+            item.science = list[0];
+            item.score = list[1];
+            break;
+        case "Music":
+            list = checkGrade(item.music, item.score, interaction, true);
+            item.music = list[0];
+            item.score = list[1];
+            break;
+        default:
+            interaction.reply("You really shouldn't be seeing this...");
+            return;
     }
+    query = `DELETE FROM ${the_table} where requestor='${interaction.user.id}'`
+    await cassie.execute(query);
+    query = `INSERT INTO ${the_table} ("requestor", "english", "history", "math", "music", "reading", "science", "score") VALUES ('${interaction.user.id}', ${item.english}, ${item.history},${item.math}, ${item.music}, ${item.reading}, ${item.science}, ${item.score})`;
+    await cassie.execute(query);
+    reportCard(interaction);
 }
 
-function checkGrade(item, score, message) {
+
+async function maxGrade(interaction) {
+    const subject = interaction.options.getString('grade').toUpperCase();
+    the_table = `table_${interaction.guildId}.grades`
+    query = `SELECT * FROM ${the_table} where requestor='${interaction.user.id}'`
+    resultSelectWhere = await cassie.execute(query);
+    if (resultSelectWhere.rows.length === 0) {
+        query = `INSERT INTO ${the_table} ("requestor", "english", "history", "math", "music", "reading", "science", "score") VALUES ('${interaction.user.id}', 0, 0, 0, 0, 0, 0, 0)`;
+        interaction.reply("say something first then max out.")
+        return await cassie.execute(query);
+    }
+    item = resultSelectWhere.rows[0];
+    items = [-1, -1];
+    switch (subject) {
+        case "MATH":
+            list = checkGrade(item.math, item.score, interaction, false);
+            while (list[0] !== items[0] && list[1] !== items[1]) {
+                items[0] = list[0];
+                items[1] = list[1];
+                item.math = list[0];
+                item.score = list[1];
+                list = checkGrade(item.math, item.score, interaction, false);
+            }
+            break;
+        case "READING":
+            list = checkGrade(item.reading, item.score, interaction, false);
+            while (list[0] !== items[0] && list[1] !== items[1]) {
+                items[0] = list[0];
+                items[1] = list[1];
+                item.reading = list[0];
+                item.score = list[1];
+                list = checkGrade(item.reading, item.score, interaction, false);
+            }
+            break;
+        case "ENGLISH":
+            list = checkGrade(item.english, item.score, interaction, false);
+            while (list[0] !== items[0] && list[1] !== items[1]) {
+                items[0] = list[0];
+                items[1] = list[1];
+                item.english = list[0];
+                item.score = list[1];
+                list = checkGrade(item.english, item.score, interaction, false);
+            }
+            break;
+        case "HISTORY":
+            list = checkGrade(item.history, item.score, interaction, false);
+            while (list[0] !== items[0] && list[1] !== items[1]) {
+                items[0] = list[0];
+                items[1] = list[1];
+                item.history = list[0];
+                item.score = list[1];
+                list = checkGrade(item.history, item.score, interaction, false);
+            }
+            break;
+        case "SCIENCE":
+            list = checkGrade(item.science, item.score, interaction, false);
+            while (list[0] !== items[0] && list[1] !== items[1]) {
+                items[0] = list[0];
+                items[1] = list[1]; item.science = list[0];
+                item.score = list[1];
+                list = checkGrade(item.science, item.score, interaction, false);
+            }
+            break;
+        case "MUSIC":
+            list = checkGrade(item.music, item.score, interaction, false);
+            while (list[0] !== items[0] && list[1] !== items[1]) {
+                items[0] = list[0];
+                items[1] = list[1];
+                item.music = list[0];
+                item.score = list[1];
+                list = checkGrade(item.music, item.score, interaction, false);
+            }
+            break;
+        default:
+            interaction.reply("You really shouldn't be seeing this...");
+            return;
+    }
+    query = `DELETE FROM ${the_table} where requestor='${interaction.user.id}'`
+    await cassie.execute(query);
+    query = `INSERT INTO ${the_table} ("requestor", "english", "history", "math", "music", "reading", "science", "score") VALUES ('${interaction.user.id}', ${item.english}, ${item.history},${item.math}, ${item.music}, ${item.reading}, ${item.science}, ${item.score})`;
+    await cassie.execute(query);
+    reportCard(interaction);
+}
+
+function checkGrade(item, score, interaction, notify) {
     if (item >= grades.length - 1) {
-        message.channel.send("You are already maxed out");
+        if (notify) {
+            interaction.reply("You are already maxed out");
+        }
         return [item, score];
     }
-    if (score < ((item + 1) * 10)) {
-        message.channel.send("Your score is too low.");
+    multipilier = 7
+    if (score < ((item + 1) * multipilier)) {
+        if (notify) {
+            interaction.reply("Your score is too low.");
+        }
         return [item, score]
     }
     item += 1;
-    score -= item * 10;
+    score -= item * multipilier;
     return [item, score];
 }
 
-function resetGrades(f, message) {
-    fs.readFile(f, 'ascii', function (err, data) {
-        if (err) {
-            return message.channel.send(err);
-        }
-        var obj = JSON.parse(data);
-        for (i in obj.grades) {
-            item = obj.grades[i];
-            if (util.isEqualIgnoreCase(item.requestor, message.author.id)) {
-                item.Math = 0;
-                item.Reading = 0;
-                item.English = 0;
-                item.History = 0;
-                item.Science = 0;
-                item.Music = 0;
-                message.channel.send("The deed is done");
-                fs.writeFile(f, JSON.stringify(obj), 'ascii', function (err) {
-                    if (err) return console.log(err);
-                });
-                break;
-            }
-        }
-    });
+async function resetGrades(interaction) {
+    the_table = `table_${interaction.guildId}.grades`
+    query = `DELETE FROM ${the_table} where requestor='${interaction.user.id}'`
+    await cassie.execute(query);
+    query = `INSERT INTO ${the_table} ("requestor", "english", "history", "math", "music", "reading", "science", "score") VALUES ('${interaction.user.id}', 0, 0, 0, 0, 0, 0, 0)`;
+    await cassie.execute(query);
+    interaction.reply("The deed is done");
 }
 
-module.exports = {reportCard, turnIn, resetGrades, maxOutGrades}
+async function goodbyeTien(interaction) {
+    the_table = `table_${interaction.guildId}.grades`
+    query = `DROP TABLE ${the_table}`
+    await cassie.execute(query);
+    query = `CREATE TABLE IF NOT EXISTS ${the_table} (requestor text PRIMARY KEY, english int, history int , math int, music int, reading int, science int , score int)`;
+    await cassie.execute(query);
+    console.log(interaction.user.username + " has reset all grades in " + interaction.guild.name)
+    interaction.reply("I could destroy the whole world with this one.")
+}
+
+module.exports = { reportCard, turnIn, resetGrades, maxOutGrades, goodbyeTien }
