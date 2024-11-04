@@ -8,12 +8,16 @@ const path = require('path');
 
 const speak = require('./speak.js');
 
+const { DateTime } = require("luxon");
+
 const { Client, Collection, GatewayIntentBits } = require('discord.js');
 
 const client = new Client({
     intents: [GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.MessageContent,
+    GatewayIntentBits.GuildMembers,
+    GatewayIntentBits.GuildPresences,
 ]
 });
 
@@ -111,8 +115,9 @@ client.once('ready', () => {
         name: 'What triggers me',
         value: 'Check out my slash commands'
     })
-    avatar = "https://cdn.discordapp.com/attachments/687125195106156547/749283650033680895/image0.png"
+    avatar = "./image0.png"
     client.user.setAvatar(avatar).catch((err) => { console.log("avatar is being updated too often") });
+    client.user.setActivity('It ezz what it ezz');
     //util.resurrection(client);
     //util.migrate(client);
     setTimeout(function () {
@@ -135,10 +140,13 @@ client.on('uncaughtException', function(err) {
 
 client.on('messageCreate', message => {
     if (message.author.bot) return;
-    let file = "config/" + message.guild.id + "/grades.json";
     const msg = message.content;
-    //return util.random_message(message);
-
+    let day = DateTime.now().setZone("America/New_York").day;
+    let month = DateTime.now().setZone("America/New_York").month;
+    if (month === 4 && day === 1) {
+        if (util.getRandomInt(0,3) === 2) return util.random_message(message);
+        return
+    }
     if (mention_bot(msg, 'say')) {
         return speak.TTSTime(message, 'say', 'en');
     }

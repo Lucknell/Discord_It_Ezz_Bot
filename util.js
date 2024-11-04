@@ -138,36 +138,25 @@ function leftToEight() {
     var d = new Date();
     return (-d + d.setHours(8, 0, 0, 0));
 }
+async function truncate(value)
+{
+    if (value < 0) return Math.ceil(value);
+    return Math.floor(value);
+}
 
 async function sendFutureBirthdayMessage(client) {
-    let date = DateTime.now().setZone("America/Los_Angeles").plus({ days: 7 })
     let day = DateTime.now().setZone("America/Los_Angeles").day;
     let month = DateTime.now().setZone("America/Los_Angeles").month;
     let year = DateTime.now().setZone("America/Los_Angeles").year;
     const Guilds = client.guilds.cache.map(guild => guild.id);
     for (var i in Guilds) {
-        guild_id = Guilds[i]
-        var query = `CREATE KEYSPACE IF NOT EXISTS table_${guild_id} WITH replication = {'class': 'NetworkTopologyStrategy'}`;
-        await cassie.execute(query);
+        const guild_id = Guilds[i]
+        //var query = `CREATE KEYSPACE IF NOT EXISTS table_${guild_id} WITH replication = {'class': 'NetworkTopologyStrategy'}`;
+        //await cassie.execute(query);
+        //the_table = `table_${guild_id}.birthdays`
+        //query = `CREATE TABLE IF NOT EXISTS ${the_table} (user_id text PRIMARY KEY, announced int, birthday text, day int, month int, requestor text, user text, year int)`;
+        //await cassie.execute(query);
         the_table = `table_${guild_id}.birthdays`
-        query = `CREATE TABLE IF NOT EXISTS ${the_table} (user_id text PRIMARY KEY, announced int, birthday text, day int, month int, requestor text, user text, year int)`;
-        await cassie.execute(query);
-        the_table = `table_${guild_id}.birthdays`
-        query = `SELECT * FROM ${the_table} where month=${date.month} AND day=${date.day} ALLOW FILTERING`
-        resultSelectWhere = await cassie.execute(query);
-        resultSelectWhere.rows.forEach(async party_ppl => {
-            if (party_ppl.announced === year) {
-                return;
-            }
-            the_table = `table_${guild_id}.birthdays`
-            let guild = client.guilds.cache.get(guild_id);
-            let channel = guild.channels.cache.find(channel => channel.name.toLowerCase() === "general");
-            channel.send("Up coming birthday for <@!" + party_ppl.user_id + ">! Your birthday is on " + party_ppl.month + "/" + party_ppl.day);
-            query = `DELETE FROM ${the_table} WHERE user_id='${party_ppl.user_id}'`
-            await cassie.execute(query);
-            query = `INSERT INTO ${the_table} ("user", "user_id" , "birthday", "requestor", "announced", "month", "day") VALUES ('${party_ppl.user}', '${party_ppl.user_id}', '${party_ppl.birthday}', '${party_ppl.requestor}', ${year} , ${party_ppl.month}, ${party_ppl.day})`;
-            await cassie.execute(query);
-        });
         query = `SELECT * FROM ${the_table} where month=${month} AND day=${day} ALLOW FILTERING`
         resultSelect = await cassie.execute(query);
         resultSelect.rows.forEach(async party_ppl => {
@@ -178,10 +167,31 @@ async function sendFutureBirthdayMessage(client) {
             let guild = client.guilds.cache.get(guild_id);
             let channel = guild.channels.cache.find(channel => channel.name.toLowerCase() === "general");
             channel.send("Happy Birthday <@!" + party_ppl.user_id + ">!");
-            query = `DELETE FROM ${the_table} WHERE user_id='${party_ppl.user_id}'`
+            query = `UPDATE ${the_table} SET "year" = ${year}, "announced" =${year}  WHERE user_id='${party_ppl.user_id}'`
             await cassie.execute(query);
-            query = `INSERT INTO ${the_table} ("user", "user_id" , "birthday", "requestor", "announced", "month", "day", "year") VALUES ('${party_ppl.user}', '${party_ppl.user_id}', '${party_ppl.birthday}', '${party_ppl.requestor}', ${year} , ${party_ppl.month}, ${party_ppl.day}, ${year})`;
-            await cassie.execute(query);
+        });
+        query = `SELECT * FROM ${the_table}`
+        resultSelectWhere = await cassie.execute(query);
+        resultSelectWhere.rows.forEach(async party_ppl => {
+            if (party_ppl.day === null || party_ppl.month === null) {
+                query = `DELETE FROM ${the_table} WHERE user_id='${party_ppl.user_id}'`
+                console.log(query)
+                await cassie.execute(query);
+                return;
+            }
+            let days = await truncate(DateTime.local(year, party_ppl.month, party_ppl.day).setZone("America/Los_Angeles").diff(DateTime.now().setZone("America/Los_Angeles"), 'days').days);
+            //console.log(party_ppl.month, party_ppl.day, days)
+            if (days < 7 && days > 0) {
+                if (party_ppl.announced === year) {
+                    return;
+                }
+                the_table = `table_${guild_id}.birthdays`
+                let guild = client.guilds.cache.get(guild_id);
+                let channel = guild.channels.cache.find(channel => channel.name.toLowerCase() === "general");
+                channel.send("Up coming birthday for <@!" + party_ppl.user_id + ">! Your birthday is on " + party_ppl.month + "/" + party_ppl.day);
+                query = `UPDATE ${the_table} SET "announced" = ${year} WHERE user_id='${party_ppl.user_id}'`
+                await cassie.execute(query);
+               }
         });
     }
 }
@@ -383,6 +393,5 @@ async function process_button_interaction(interaction) {
     if (interaction.customId === 'secret_santa_guess_game') {
         return await secret_santa_guess_game_process(interaction);
     }
-    await interaction.reply("This feature is not implemented yet.")
 }
 module.exports = { migrate, resurrection, getRandomInt, random_message, isEqualIgnoreCase, itEzzMessage, itEzzReply, process_messages, createServerFile, leftToEight, encode, decode, random, clientID, sendFutureBirthdayMessage, process_button_interaction }
