@@ -25,7 +25,7 @@ module.exports = {
     async execute(interaction) {
         the_table = `table_${interaction.guildId}.santa`
         query = `SELECT * FROM ${the_table} where guild_id='${interaction.guildId}'`
-        const ephemeral = interaction.options.getBoolean("ephemeral");
+        const ephemeral = interaction.options.getBoolean("ephemeral") ?? true;
         const cqlshList = elem => ` '${elem}' `;
         var resultSelectWhere = await cassie.execute(query).catch((err) => {
             return interaction.reply(replies[util.getRandomInt(0, replies.length)]);
